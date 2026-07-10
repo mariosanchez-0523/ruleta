@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ruleta</title>
+<style>
+  /* ============================================================
+     IDENTIDAD VISUAL — oscuro/fiesta, móvil primero
+     ============================================================ */
+  :root{
+    --bg:#0d0b14;
+    --bg2:#16121f;
+    --card:#1e1830;
+    --card2:#271f3d;
+    --ink:#f4f1fb;
+    --muted:#a49cc0;
+    --line:#332a4d;
+    --accent:#ff2e88;      /* magenta fiesta */
+    --accent2:#7b5cff;     /* violeta */
+    --gold:#ffd15c;
+    --ok:#3ddc97;
+    --danger:#ff5b6e;
+    --r:18px;
+    --shadow:0 18px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:
+      radial-gradient(120% 80% at 20% -10%, rgba(123,92,255,.28), transparent 55%),
+      radial-gradient(120% 80% at 90% 0%, rgba(255,46,136,.22), transparent 50%),
+      var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .screen{
+    display:none;
+    min-height:100dvh;
+    padding:22px 18px calc(22px + env(safe-area-inset-bottom));
+    flex-direction:column;
+    max-width:560px;
+    margin:0 auto;
+  }
+  .screen.active{display:flex;}
+
+  h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px;}
+  h1 .spark{color:var(--accent);}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 18px;}
+  .label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;}
+
+  /* ---- botones ---- */
+  .btn{
+    appearance:none;border:0;border-radius:var(--r);
+    font-size:17px;font-weight:800;color:#fff;
+    padding:17px 20px;width:100%;cursor:pointer;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    box-shadow:0 10px 24px rgba(255,46,136,.28);
+    transition:transform .08s ease, filter .15s ease;
+  }
+  .btn:active{transform:scale(.97);filter:brightness(1.05);}
+  .btn.ghost{background:var(--card2);box-shadow:none;color:var(--ink);border:1px solid var(--line);}
+  .btn.small{padding:12px 14px;font-size:15px;width:auto;}
+  .btn:disabled{opacity:.4;filter:grayscale(.4);}
+
+  /* ---- setup: jugadores ---- */
+  .players{display:flex;flex-direction:column;gap:10px;}
+  .player-row{
+    display:flex;align-items:center;gap:10px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:6px 6px 6px 14px;
+    user-select:none;
+  }
+  .player-row.sel{border-color:var(--accent2);}
+  .player-row .name{
+    flex:1;color:var(--ink);font-size:16px;font-weight:600;
+    padding:12px 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .player-row input{
+    flex:1;background:transparent;border:0;color:var(--ink);
+    font-size:16px;font-weight:600;padding:12px 0;outline:none;min-width:0;
+  }
+  .player-row .del{
+    background:transparent;border:0;color:var(--danger);font-size:22px;
+    width:0;height:40px;border-radius:10px;cursor:pointer;flex:none;
+    overflow:hidden;padding:0;opacity:0;transition:width .18s ease,opacity .18s ease;
+  }
+  .player-row.sel .del{width:40px;opacity:1;}
+  .player-row .del:active{background:var(--card2);}
+  .gender{display:flex;gap:4px;flex:none;}
+  .gbtn{
+    background:var(--card2);border:1px solid var(--line);border-radius:8px;
+    color:var(--muted);font-size:13px;font-weight:800;width:30px;height:30px;
+    cursor:pointer;transition:.12s;display:flex;align-items:center;justify-content:center;
+  }
+  .gbtn.sel-h{background:rgba(91,164,255,.2);border-color:#5ba4ff;color:#5ba4ff;}
+  .gbtn.sel-m{background:rgba(255,46,136,.2);border-color:var(--accent);color:var(--accent);}
+  .gbtn:active{transform:scale(.93);}
+  .addrow-gender{display:flex;gap:4px;flex:none;align-items:center;}
+  .addrow-gender .gbtn{width:36px;height:36px;font-size:14px;}
+  .cupid-tag{
+    font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--gold);
+    border:1px solid rgba(255,209,92,.4);border-radius:999px;padding:2px 7px;flex:none;
+  }
+  .addrow{display:flex;gap:10px;margin-top:10px;}
+  .addrow input{
+    flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    color:var(--ink);font-size:16px;padding:14px;outline:none;
+  }
+  .addrow input:focus{border-color:var(--accent2);}
+
+  /* ---- niveles ---- */
+  .levels{display:flex;gap:10px;}
+  .level{
+    flex:1;text-align:center;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:14px 8px;cursor:pointer;transition:.15s;
+  }
+  .level .emoji{font-size:24px;display:block;margin-bottom:4px;}
+  .level .name{font-size:14px;font-weight:800;}
+  .level.sel{border-color:var(--accent);background:linear-gradient(135deg,rgba(255,46,136,.18),rgba(123,92,255,.18));box-shadow:inset 0 0 0 1px var(--accent);}
+
+  .spacer{flex:1;}
+  .foot{margin-top:16px;}
+  .hint{color:var(--muted);font-size:12px;text-align:center;margin-top:10px;}
+
+  /* ============================================================
+     JUEGO
+     ============================================================ */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .topbar .lvlpill{font-size:12px;font-weight:800;color:var(--gold);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px;}
+  .topbar .back{background:transparent;border:0;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;}
+
+  /* ---- ruleta ---- */
+  .wheel-wrap{position:relative;width:min(84vw,340px);aspect-ratio:1;margin:14px auto 6px;}
+  .pointer{
+    position:absolute;top:-6px;left:50%;transform:translateX(-50%);z-index:5;
+    width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;
+    border-top:26px solid var(--gold);filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));
+  }
+  .wheel{
+    width:100%;height:100%;border-radius:50%;
+    box-shadow:0 0 0 8px var(--bg2),0 0 0 10px var(--line),var(--shadow);
+    transition:transform 4.6s cubic-bezier(.17,.67,.16,1);
+  }
+  .hub{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:64px;height:64px;border-radius:50%;z-index:4;
+    background:radial-gradient(circle at 35% 30%,#fff,#d9d0f0 40%,#8a7fb8);
+    box-shadow:0 6px 14px rgba(0,0,0,.5);
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;
+  }
+
+  .stage{flex:1;display:flex;flex-direction:column;justify-content:flex-start;}
+
+  /* ---- carta ---- */
+  .card{
+    background:linear-gradient(160deg,var(--card2),var(--card));
+    border:1px solid var(--line);border-radius:24px;
+    padding:26px 22px;margin-top:18px;box-shadow:var(--shadow);
+    opacity:0;transform:translateY(16px) scale(.98);
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .card.show{opacity:1;transform:none;}
+  .card .cat{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;}
+  .card .who{
+    display:inline-block;font-size:15px;font-weight:800;color:#0d0b14;
+    background:var(--gold);padding:6px 14px;border-radius:999px;margin-bottom:16px;
+  }
+  .card .phrase{font-size:23px;line-height:1.35;font-weight:700;}
+  .card .penalty{
+    margin-top:16px;font-size:14px;font-weight:700;color:var(--muted);
+    border-top:1px solid var(--line);padding-top:12px;
+  }
+  .card .penalty b{color:var(--gold);}
+
+  /* Banner de regla activa (persistente) */
+  .rulebar{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,209,92,.12);border:1px solid rgba(255,209,92,.4);
+    border-radius:12px;padding:10px 14px;margin-bottom:12px;
+    font-size:13px;font-weight:700;color:var(--gold);
+  }
+  .rulebar .rounds{margin-left:auto;font-size:11px;opacity:.85;white-space:nowrap;}
+
+  /* Carta de evento: se distingue de las normales */
+  .card.evento{
+    background:linear-gradient(160deg,#2a1f3d,#1d1630);
+    border-color:var(--accent2);
+    box-shadow:0 0 0 1px var(--accent2),var(--shadow);
+  }
+  .card.evento .cat{color:var(--accent2);}
+  .card .evento-box{
+    margin-top:16px;padding:14px;border-radius:14px;
+    background:linear-gradient(135deg,rgba(123,92,255,.22),rgba(255,46,136,.14));
+    border:1px solid var(--accent2);
+  }
+  .card .evento-box .ev-tit{
+    font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--accent2);margin-bottom:6px;
+  }
+  .card .evento-box .ev-txt{font-size:16px;font-weight:700;line-height:1.35;color:var(--ink);}
+
+  .turnbtn{margin-top:auto;}
+  .turnrow{margin-top:auto;display:flex;gap:10px;align-items:stretch;}
+  .turnrow .turnbtn{margin-top:0;flex:1;}
+  .btn.skip{
+    flex:none;width:auto;background:var(--card2);box-shadow:none;
+    color:var(--muted);border:1px solid var(--line);
+  }
+
+  /* ============================================================
+     MODO CUPIDO (long-press) — overlay
+     ============================================================ */
+  .overlay{
+    position:fixed;inset:0;z-index:50;display:none;
+    align-items:flex-end;justify-content:center;
+    background:rgba(6,4,12,.72);backdrop-filter:blur(4px);
+  }
+  .overlay.active{display:flex;}
+  .sheet{
+    width:100%;max-width:560px;background:var(--bg2);
+    border-top-left-radius:26px;border-top-right-radius:26px;
+    border-top:1px solid var(--line);
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+    box-shadow:0 -20px 50px rgba(0,0,0,.5);
+    animation:slideup .28s ease;
+  }
+  @keyframes slideup{from{transform:translateY(100%);}to{transform:none;}}
+  .sheet h2{margin:0 0 2px;font-size:20px;font-weight:800;}
+  .sheet .cupid-sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  .pair-grid{display:flex;flex-direction:column;gap:8px;max-height:38vh;overflow:auto;}
+  .pair{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  }
+  .pair .names{font-size:15px;font-weight:700;}
+  .pair .names small{color:var(--muted);font-weight:600;}
+  .pair .rm{background:transparent;border:0;color:var(--danger);font-size:14px;font-weight:800;cursor:pointer;}
+  .selectors{display:flex;gap:8px;margin-top:12px;}
+  .selectors select{
+    flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    color:var(--ink);font-size:15px;padding:12px;outline:none;
+  }
+  .sheet-actions{display:flex;gap:10px;margin-top:14px;}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:14px 0;}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:var(--card2);border:1px solid var(--line);color:var(--ink);
+    padding:12px 18px;border-radius:999px;font-size:14px;font-weight:700;
+    z-index:80;opacity:0;pointer-events:none;transition:opacity .25s;white-space:nowrap;
+  }
+  .toast.show{opacity:1;}
+
+  /* Engranaje de ajustes */
+  .setup-top{display:flex;justify-content:flex-start;margin-bottom:2px;}
+  .gear{
+    background:transparent;border:0;font-size:24px;cursor:pointer;
+    padding:4px;line-height:1;opacity:.85;
+  }
+  .gear:active{transform:scale(.92);}
+
+  /* Filas de ajuste con interruptor */
+  .setting-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 4px;font-size:16px;font-weight:700;
+    border-bottom:1px solid var(--line);
+  }
+  .toggle{
+    width:52px;height:30px;border-radius:999px;border:0;cursor:pointer;
+    background:var(--card2);border:1px solid var(--line);position:relative;
+    transition:background .18s;
+  }
+  .toggle .knob{
+    position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+    background:var(--muted);transition:left .18s,background .18s;
+  }
+  .toggle.on{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;}
+  .toggle.on .knob{left:25px;background:#fff;}
+
+  /* Overlay de evento a pantalla completa */
+  .ev-overlay{
+    position:fixed;inset:0;z-index:70;display:none;
+    flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 40%,rgba(123,92,255,.35),rgba(6,4,12,.94));
+    backdrop-filter:blur(3px);padding:24px;
+  }
+  .ev-overlay.active{display:flex;animation:evpop .3s ease;}
+  @keyframes evpop{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:none;}}
+  .ev-overlay .confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .ev-content{position:relative;text-align:center;max-width:440px;}
+  .ev-big-tit{
+    font-size:16px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:18px;
+  }
+  .ev-big-txt{font-size:28px;line-height:1.3;font-weight:800;color:var(--ink);}
+  .ev-close{
+    position:relative;margin-top:36px;max-width:440px;width:100%;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== SETUP ===================== -->
+<section id="setup" class="screen active">
+  <div class="setup-top">
+    <button class="gear" id="gearBtn" aria-label="Ajustes">⚙️</button>
+  </div>
+  <h1>Ruleta<span class="spark">.</span></h1>
+  <p class="sub">Jugadores, nivel, y a girar.</p>
+
+  <div class="label">Jugadores</div>
+  <div id="players" class="players"></div>
+  <div class="addrow">
+    <input id="newName" type="text" placeholder="Nombre nuevo" maxlength="18" autocomplete="off">
+    <div class="addrow-gender">
+      <button class="gbtn" id="gH" data-g="H">H</button>
+      <button class="gbtn" id="gM" data-g="M">M</button>
+    </div>
+    <button class="btn small" id="addBtn">Añadir</button>
+  </div>
+
+  <div class="label">Nivel</div>
+  <div class="levels" id="levels">
+    <div class="level" data-lvl="suave"><span class="emoji">😇</span><span class="name">Suave</span></div>
+    <div class="level" data-lvl="picante"><span class="emoji">🌶️</span><span class="name">Picante</span></div>
+    <div class="level" data-lvl="bestia"><span class="emoji">🔥</span><span class="name">Bestia</span></div>
+  </div>
+
+  <div class="spacer"></div>
+  <div class="foot">
+    <button class="btn" id="startBtn">Empezar</button>
+  </div>
+</section>
+
+<!-- ===================== JUEGO ===================== -->
+<section id="game" class="screen">
+  <div class="topbar">
+    <button class="back" id="backBtn">‹ Ajustes</button>
+    <span class="lvlpill" id="lvlPill">🌶️ Picante</span>
+  </div>
+
+  <div class="wheel-wrap">
+    <div class="pointer"></div>
+    <canvas class="wheel" id="wheel" width="680" height="680"></canvas>
+    <div class="hub" id="hub">🎯</div>
+  </div>
+
+  <div class="stage">
+    <div class="rulebar" id="ruleBar" style="display:none"></div>
+    <div class="card" id="card">
+      <div class="cat" id="cardCat">—</div>
+      <div class="who" id="cardWho" style="display:none"></div>
+      <div class="phrase" id="cardPhrase">Dale al centro para girar.</div>
+      <div class="penalty" id="cardPenalty" style="display:none"></div>
+      <div class="evento-box" id="cardEvento" style="display:none"></div>
+    </div>
+    <div class="turnrow">
+      <button class="btn skip" id="skipBtn" style="display:none">Saltar</button>
+      <button class="btn turnbtn" id="turnBtn">Girar</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CUPIDO SHEET ===================== -->
+<div class="overlay" id="cupidOverlay">
+  <div class="sheet">
+    <h2>💘 Modo cupido</h2>
+    <p class="cupid-sub">Las parejas de aquí recibirán más turnos con acción. Nadie más lo verá.</p>
+    <div class="pair-grid" id="pairGrid"></div>
+    <div class="selectors">
+      <select id="selA"></select>
+      <select id="selB"></select>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn small ghost" id="cupidClose" style="flex:1">Cerrar</button>
+      <button class="btn small" id="pairAdd" style="flex:1">Juntar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===================== AJUSTES ===================== -->
+<div class="overlay" id="settingsOverlay">
+  <div class="sheet">
+    <h2>⚙️ Ajustes</h2>
+    <div class="setting-row">
+      <span>Vibración</span>
+      <button class="toggle" id="tglVibra" aria-label="Vibración"><span class="knob"></span></button>
+    </div>
+    <div class="setting-row">
+      <span>Sonido</span>
+      <button class="toggle" id="tglSonido" aria-label="Sonido"><span class="knob"></span></button>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn small ghost" id="settingsClose" style="flex:1">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== EVENTO (pantalla completa) ===================== -->
+<div class="ev-overlay" id="evOverlay">
+  <canvas class="confetti" id="confetti"></canvas>
+  <div class="ev-content">
+    <div class="ev-big-tit">¡Evento!</div>
+    <div class="ev-big-txt" id="evBigTxt"></div>
+  </div>
+  <button class="btn ev-close" id="evClose">Cerrar</button>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   BANCO DE FRASES
+   Estructura fija. La lógica NO asume cuántas frases hay.
+   Categorías (5):
+     del_1_al   -> "Del 1 al..."         puntuar algo del 1 al 10
+     verdad     -> "Verdad"              pregunta personal
+     reto       -> "Reto"                acción, puede incluir a otro
+     quien_es_mas -> "Quién es más probable"  señalar a alguien
+     con_quien  -> "Con quién de aquí"   emparejar con otro
+
+   Placeholders que la lógica sustituye por nombres:
+     {jugador}  -> jugador al que le toca el turno
+     {otro}     -> otro jugador distinto (para reto/con_quien)
+
+   >>> AÑADIR MÁS FRASES: pega dentro de cada lista, una por línea,
+   entre comillas y separadas por coma. No toques nada más.
+   ============================================================ */
+const BANCO = {
+
+  suave: {
+    del_1_al: [
+      "¿Os dais un abrazo?",
+      "¿Os hacéis un cumplido sincero?",
+      "¿Mantenéis la mirada durante cinco segundos?",
+      "¿Os hacéis una foto juntos?",
+      "¿Bailáis juntos durante diez segundos?",
+      "¿Os contáis vuestra primera impresión?",
+      "¿Os sentáis juntos durante una ronda?",
+      "¿Inventáis un saludo secreto?",
+      "¿Os chocáis la mano de una forma original?",
+      "¿Os dedicáis una canción?",
+      "¿Os decís algo que tenéis en común?",
+      "¿Compartís una anécdota divertida?",
+      "¿Os hacéis una pregunta para conoceros mejor?",
+      "¿Intercambiáis un accesorio durante una ronda?",
+      "¿Imitáis una escena de primera cita?",
+      "¿Hacéis una pose de pareja de película?",
+      "¿Elegís una canción para escuchar juntos?",
+      "¿Os decís qué energía os transmite el otro?",
+      "¿Inventáis un apodo inocente para el otro?",
+      "¿Brindáis juntos?",
+      "¿Os dais un abrazo de cinco segundos?",
+      "¿Os susurráis un cumplido al oído?",
+      "¿Os cogéis de la mano durante diez segundos?",
+      "¿Hacéis un mini baile juntos?",
+      "¿Os contáis un secreto inocente?",
+      "¿Os miráis sin reíros durante diez segundos?",
+      "¿Elegís el próximo reto del otro?",
+      "¿Os decís qué plan haríais juntos?",
+      "¿Os hacéis una foto como si fuerais una pareja famosa?",
+      "¿Compartís vuestro emoji más usado?",
+      "¿Os sentáis hombro con hombro durante una ronda?",
+      "¿Os contáis qué fue lo primero que os llamó la atención?",
+      "¿Hacéis una promesa divertida para esta noche?",
+      "¿Os dedicáis una frase bonita?",
+      "¿Representáis cómo sería vuestra primera cita?",
+      "¿Intentáis haceros reír en menos de veinte segundos?",
+      "¿Compartís un sorbo de vuestra bebida?",
+      "¿Apoyáis la cabeza en el hombro del otro durante cinco segundos?",
+      "¿Os decís qué cualidad os gusta del otro?",
+      "¿Formáis equipo durante dos rondas?",
+      "¿Intercambiáis una mirada cómplice?",
+      "¿Os dais un beso en la mejilla?",
+      "¿Os abrazáis mientras el grupo cuenta hasta cinco?",
+      "¿Os decís si tendríais una cita juntos?",
+      "¿Bailáis una canción elegida por el grupo?",
+      "¿Os mandáis un mensaje bonito?",
+      "¿Os contáis qué tipo de cita os gustaría tener?",
+      "¿Os quedáis cogidos de la mano hasta el próximo turno?",
+      "¿Improvisáis una escena romántica divertida?",
+      "¿Hacéis juntos el siguiente reto?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    verdad: [
+      "¿Qué es lo primero que te hace fijarte en alguien?",
+      "¿Cuál es el cumplido más bonito que te han dicho?",
+      "¿Qué pequeño gesto consigue conquistarte?",
+      "¿Alguna vez te ha gustado alguien de tu grupo de amigos?",
+      "¿Qué canción compartirías con una persona especial?",
+      "¿Cuál sería tu cita perfecta para conoceros mejor?",
+      "¿Qué detalle recuerdas siempre de alguien que te gusta?",
+      "¿Te cuesta más dar un cumplido o recibirlo?",
+      "¿Qué tipo de mensaje te alegra el día?",
+      "¿Cuál ha sido tu momento más tímido con alguien que te atraía?",
+      "¿Qué cualidad te parece más atractiva en una persona?",
+      "¿Qué te hace sentir rápidamente en confianza?",
+      "¿Alguna vez has ensayado un mensaje antes de enviarlo?",
+      "¿Qué plan sencillo te parece muy romántico?",
+      "¿Qué te gusta más, una buena conversación o un plan divertido?",
+      "¿Cuándo fue la última vez que sentiste mariposas?",
+      "¿Qué te hace pensar que existe química entre dos personas?",
+      "¿Qué tipo de humor te conquista?",
+      "¿Cuál es tu forma favorita de demostrar cariño?",
+      "¿Qué mirada o gesto te pone más nervioso?",
+      "¿Te gusta más que den el primer paso o darlo tú?",
+      "¿Cuál es la excusa más tonta que has usado para hablar con alguien?",
+      "¿Alguna vez has releído una conversación porque te gustaba esa persona?",
+      "¿Qué secreto inocente casi nadie sabe de ti?",
+      "¿Qué plan te gustaría compartir con alguien de este grupo?",
+      "¿Qué te da más vergüenza cuando estás coqueteando?",
+      "¿Qué tipo de persona consigue que bajes la guardia?",
+      "¿Qué cumplido te gustaría escuchar esta noche?",
+      "¿Alguna vez has sentido una conexión inmediata con alguien?",
+      "¿Qué gesto consideras más cariñoso?",
+      "¿Qué sería lo primero que preguntarías en una cita?",
+      "¿Te gusta más conocer a alguien por mensajes o en persona?",
+      "¿Qué canción describe mejor tu vida amorosa?",
+      "¿Cuál es tu mayor virtud cuando estás conociendo a alguien?",
+      "¿Qué pequeño defecto tuyo te parece adorable?",
+      "¿Qué te hace sentir especial?",
+      "¿Cuál ha sido tu conversación más larga con alguien que te gustaba?",
+      "¿Qué es lo más bonito que has hecho por alguien?",
+      "¿Alguna vez has tenido un flechazo inesperado?",
+      "¿Qué plan de película, paseo o cena escogerías para una primera cita?",
+      "¿Qué te hace confiar en otra persona?",
+      "¿Qué tipo de mirada te resulta irresistible?",
+      "¿Cuál es la mayor indirecta que has lanzado?",
+      "¿Alguna vez has confundido amabilidad con coqueteo?",
+      "¿Qué tema podría hacerte hablar durante horas?",
+      "¿Qué persona de este grupo crees que te conoce mejor?",
+      "¿Qué momento de esta noche te ha hecho sonreír más?",
+      "¿Qué es algo que te gustaría atreverte a hacer más?",
+      "¿Qué señal utilizas cuando alguien te interesa?",
+      "¿Hay alguien aquí con quien te gustaría hablar más?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    reto: [
+      "Haz un cumplido sincero a la persona que elijas.",
+      "Mantén contacto visual durante cinco segundos con alguien del grupo.",
+      "Cuenta una anécdota divertida sobre una cita.",
+      "Elige a alguien y dile qué energía te transmite.",
+      "Haz una pose de foto de pareja con quien quieras.",
+      "Dedica una canción a alguien del grupo.",
+      "Intercambia tu sitio con la persona con la que menos has hablado.",
+      "Dile a alguien qué detalle suyo te ha llamado la atención.",
+      "Haz reír a una persona del grupo en menos de veinte segundos.",
+      "Cuenta cuál sería tu plan ideal para una cita sencilla.",
+      "Imita cómo actuarías al conocer a alguien que te gusta.",
+      "Da un abrazo a alguien que acepte recibirlo.",
+      "Choca las manos con la persona con la que tengas más complicidad.",
+      "Haz una pregunta para conocer mejor a alguien del grupo.",
+      "Describe tu tipo ideal usando solo tres palabras.",
+      "Cuenta una historia que siempre te haga sonreír.",
+      "Deja que el grupo elija una canción para que la bailes durante diez segundos.",
+      "Envía un emoji amable a la última persona con la que hablaste.",
+      "Di algo positivo sobre cada persona del grupo.",
+      "Haz un brindis por la amistad del grupo.",
+      "Invita a alguien a compartir el próximo reto contigo.",
+      "Representa una escena de primera cita durante quince segundos.",
+      "Dile a una persona qué plan harías con ella.",
+      "Haz una mirada de película a quien elijas.",
+      "Cuenta una confesión pequeña y divertida.",
+      "Deja que alguien te haga una pregunta inocente.",
+      "Elige a una persona para inventar un saludo secreto.",
+      "Haz una foto divertida con alguien del grupo.",
+      "Cuenta qué canción pondrías para animar una cita.",
+      "Dile a la persona de tu derecha una cualidad que te guste de ella.",
+      "Haz un mini baile con alguien que quiera acompañarte.",
+      "Describe a una persona del grupo como si fuera un personaje de película.",
+      "Pregunta a alguien cuál sería su viaje ideal.",
+      "Cuenta tu táctica más inocente para iniciar una conversación.",
+      "Haz una reverencia exagerada a la persona que elijas.",
+      "Sonríe sin hablar durante diez segundos a alguien del grupo.",
+      "Elige a alguien para formar equipo durante la siguiente ronda.",
+      "Cuenta algo que te gustaría aprender con otra persona.",
+      "Representa cómo reaccionas cuando recibes un mensaje que te encanta.",
+      "Dile a alguien qué canción crees que le representa.",
+      "Haz una pregunta que nunca hayas hecho en una primera cita.",
+      "Cuenta qué pequeño detalle consigue alegrarte el día.",
+      "Intercambia un accesorio con alguien durante una ronda.",
+      "Haz un cumplido sin mencionar el aspecto físico.",
+      "Inventa un apodo cariñoso e inocente para alguien del grupo.",
+      "Deja que una persona elija tu próximo gesto para una foto.",
+      "Cuenta un recuerdo bonito que tengas con amigos.",
+      "Elige a alguien y mantened una conversación usando solo preguntas durante veinte segundos.",
+      "Pregunta a alguien qué impresión tuvo de ti al conocerte.",
+      "Acércate a alguien que acepte y susúrrale un cumplido inocente.",
+      // AÑADIR MÁS AQUÍ
+    ],
+    quien_es_mas: [
+      "¿Quién es más probable que se enamore a primera vista?",
+      "¿Quién es más probable que dé el primer paso?",
+      "¿Quién es más probable que organice una cita perfecta?",
+      "¿Quién es más probable que mande un mensaje de buenos días?",
+      "¿Quién es más probable que recuerde todos los detalles?",
+      "¿Quién es más probable que tenga un flechazo secreto?",
+      "¿Quién es más probable que se ponga nervioso al recibir un cumplido?",
+      "¿Quién es más probable que conquiste haciendo reír?",
+      "¿Quién es más probable que prepare una sorpresa romántica?",
+      "¿Quién es más probable que tarde horas en responder un mensaje?",
+      "¿Quién es más probable que relea una conversación muchas veces?",
+      "¿Quién es más probable que escriba primero después de una cita?",
+      "¿Quién es más probable que tenga una cita improvisada?",
+      "¿Quién es más probable que se declare con una canción?",
+      "¿Quién es más probable que tenga mejor conversación?",
+      "¿Quién es más probable que lance indirectas sin darse cuenta?",
+      "¿Quién es más probable que confunda una indirecta?",
+      "¿Quién es más probable que tenga una admiración secreta?",
+      "¿Quién es más probable que acepte una cita a ciegas?",
+      "¿Quién es más probable que haga amigos en cualquier lugar?",
+      "¿Quién es más probable que consiga que alguien se sienta especial?",
+      "¿Quién es más probable que prepare una cena romántica?",
+      "¿Quién es más probable que se ría en un momento incómodo?",
+      "¿Quién es más probable que tenga más paciencia para conocer a alguien?",
+      "¿Quién es más probable que mantenga un secreto?",
+      "¿Quién es más probable que mande el mensaje más bonito?",
+      "¿Quién es más probable que haga un viaje por amor?",
+      "¿Quién es más probable que tenga una historia romántica de película?",
+      "¿Quién es más probable que note cuando dos personas tienen química?",
+      "¿Quién es más probable que se quede hablando hasta el amanecer?",
+      "¿Quién es más probable que prepare el mejor plan de grupo?",
+      "¿Quién es más probable que cree una broma privada con alguien?",
+      "¿Quién es más probable que se ponga rojo al coquetear?",
+      "¿Quién es más probable que se atreva a pedir una cita?",
+      "¿Quién es más probable que dé los mejores abrazos?",
+      "¿Quién es más probable que haga un cumplido inesperado?",
+      "¿Quién es más probable que se fije primero en una sonrisa?",
+      "¿Quién es más probable que tenga más personas interesadas?",
+      "¿Quién es más probable que tenga una conexión inesperada esta noche?",
+      "¿Quién es más probable que consiga caer bien a todo el mundo?",
+      "¿Quién es más probable que sea romántico en secreto?",
+      "¿Quién es más probable que prepare una lista de canciones para alguien?",
+      "¿Quién es más probable que dé buenos consejos sobre relaciones?",
+      "¿Quién es más probable que se enamore de un amigo?",
+      "¿Quién es más probable que tenga una cita muy divertida?",
+      "¿Quién es más probable que esconda mejor sus sentimientos?",
+      "¿Quién es más probable que diga lo que siente sin rodeos?",
+      "¿Quién es más probable que cree el momento más bonito de la noche?",
+      "¿Quién es más probable que termine hablando con alguien hasta muy tarde?",
+      "¿Quién es más probable que salga de aquí con una nueva complicidad?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    con_quien: [
+      "¿Con quién de aquí compartirías una cena tranquila?",
+      "¿Con quién de aquí te irías de viaje un fin de semana?",
+      "¿Con quién de aquí crees que tendrías una conversación interesante?",
+      "¿Con quién de aquí compartirías una lista de canciones?",
+      "¿Con quién de aquí te gustaría hablar más esta noche?",
+      "¿Con quién de aquí crees que harías un buen equipo?",
+      "¿Con quién de aquí te irías a tomar un café?",
+      "¿Con quién de aquí te reirías durante una cita?",
+      "¿Con quién de aquí compartirías un secreto inocente?",
+      "¿Con quién de aquí verías una película bajo una manta?",
+      "¿Con quién de aquí saldrías a dar un paseo de madrugada?",
+      "¿Con quién de aquí te atreverías a tener una cita improvisada?",
+      "¿Con quién de aquí crees que tienes más cosas en común?",
+      "¿Con quién de aquí organizarías una fiesta?",
+      "¿Con quién de aquí bailarías una canción lenta?",
+      "¿Con quién de aquí irías a un concierto?",
+      "¿Con quién de aquí compartirías una aventura?",
+      "¿Con quién de aquí crees que hablarías hasta el amanecer?",
+      "¿Con quién de aquí prepararías una cena?",
+      "¿Con quién de aquí pasarías una tarde sin mirar el móvil?",
+      "¿Con quién de aquí harías un viaje largo en coche?",
+      "¿Con quién de aquí crees que tendrías más complicidad?",
+      "¿Con quién de aquí harías una foto de pareja de broma?",
+      "¿Con quién de aquí intercambiarías tu canción favorita?",
+      "¿Con quién de aquí te sentarías a ver las estrellas?",
+      "¿Con quién de aquí tendrías una primera cita?",
+      "¿Con quién de aquí te gustaría compartir más planes?",
+      "¿Con quién de aquí te irías a una isla desierta?",
+      "¿Con quién de aquí montarías un negocio?",
+      "¿Con quién de aquí compartirías una conversación profunda?",
+      "¿Con quién de aquí harías un reto en pareja?",
+      "¿Con quién de aquí crees que te entenderías sin hablar?",
+      "¿Con quién de aquí te gustaría crear una broma privada?",
+      "¿Con quién de aquí irías a una boda como acompañante?",
+      "¿Con quién de aquí compartirías el último trozo de pizza?",
+      "¿Con quién de aquí harías una escapada improvisada?",
+      "¿Con quién de aquí crees que tendrías una cita más divertida?",
+      "¿Con quién de aquí te sentirías más cómodo siendo tú mismo?",
+      "¿Con quién de aquí harías una noche de películas?",
+      "¿Con quién de aquí irías a conocer una ciudad nueva?",
+      "¿Con quién de aquí formarías un dúo para un karaoke?",
+      "¿Con quién de aquí aceptarías intercambiar mensajes durante una semana?",
+      "¿Con quién de aquí compartirías tus planes de futuro?",
+      "¿Con quién de aquí crees que podrías tener más química?",
+      "¿Con quién de aquí te irías a desayunar mañana?",
+      "¿Con quién de aquí compartirías una puesta de sol?",
+      "¿Con quién de aquí intentarías aprender un baile?",
+      "¿Con quién de aquí te gustaría pasar más tiempo?",
+      "¿Con quién de aquí harías un plan sin saber adónde vais?",
+      "¿Con quién de aquí crees que podría surgir una bonita amistad o algo más?",
+      // AÑADIR MÁS AQUÍ
+    ],
+  },
+
+  picante: {
+    del_1_al: [
+      "¿Os dais un beso de cinco segundos?",
+      "¿Os sentáis uno encima del otro durante una ronda?",
+      "¿Os besáis en el cuello?",
+      "¿Os susurráis al oído qué os atrae del otro?",
+      "¿Mantenéis una mirada intensa durante quince segundos?",
+      "¿Os dais un beso donde elija la otra persona, evitando zonas íntimas?",
+      "¿Os abrazáis por la cintura durante una ronda?",
+      "¿Bailáis pegados durante treinta segundos?",
+      "¿Os contáis qué haríais en una cita a solas?",
+      "¿Os dais un beso con los ojos cerrados?",
+      "¿Os acariciáis el pelo durante veinte segundos?",
+      "¿Os decís qué parte del otro os parece más atractiva?",
+      "¿Os quedáis con la cara a pocos centímetros durante diez segundos?",
+      "¿Os dais un beso lento en la mejilla?",
+      "¿Os cogéis de la cintura y posáis como pareja?",
+      "¿Os decís si alguna vez os habéis imaginado besándoos?",
+      "¿Os dais tres besos rápidos seguidos?",
+      "¿Os abrazáis por detrás durante veinte segundos?",
+      "¿Os contáis una fantasía romántica que os gustaría vivir?",
+      "¿Os sentáis juntos bajo la misma chaqueta o manta?",
+      "¿Os dais un masaje en los hombros durante treinta segundos?",
+      "¿Os acercáis como si fuerais a besaros y os quedáis a un centímetro?",
+      "¿Os decís cuál sería vuestra cita más picante juntos?",
+      "¿Os dais un beso en la comisura de los labios?",
+      "¿Os miráis fijamente mientras os cogéis de la mano?",
+      "¿Os tumbáis juntos durante una ronda?",
+      "¿Os susurráis una frase provocadora al oído?",
+      "¿Os dais un abrazo apretado durante quince segundos?",
+      "¿Os contáis qué fue lo primero que os atrajo físicamente?",
+      "¿Os dais un beso elegido por el grupo entre mejilla, cuello o labios?",
+      "¿Os acariciáis la cara durante diez segundos?",
+      "¿Os sentáis cara a cara con las piernas entrelazadas?",
+      "¿Os decís qué prenda del otro os gusta más?",
+      "¿Os besáis mientras el grupo cuenta hasta cinco?",
+      "¿Os cogéis de la mano por debajo de la mesa durante una ronda?",
+      "¿Os hacéis una foto fingiendo que acabáis de besaros?",
+      "¿Os decís qué tipo de beso creéis que da el otro?",
+      "¿Os quedáis abrazados hasta vuestro siguiente turno?",
+      "¿Os dais un beso sorpresa cuando la otra persona cierre los ojos?",
+      "¿Os contáis cuál sería vuestro lugar ideal para besaros?",
+      "¿Os dais un masaje corto en la espalda?",
+      "¿Os apoyáis frente con frente durante quince segundos?",
+      "¿Os decís qué haríais si estuvierais solos ahora mismo?",
+      "¿Os dais un beso sin usar las manos?",
+      "¿Os rozáis la nariz y mantenéis la mirada?",
+      "¿Os sentáis juntos mientras uno rodea al otro con el brazo?",
+      "¿Os dedicáis vuestra mejor mirada de ligue?",
+      "¿Os dais un beso de película?",
+      "¿Os decís si aceptaríais terminar la noche juntos?",
+      "¿Elegís un lugar apartado para hablar a solas durante dos minutos?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    verdad: [
+      "¿Con quién de aquí te besarías sin pensarlo demasiado?",
+      "¿Cuál ha sido el lugar más atrevido donde has besado a alguien?",
+      "¿Has imaginado alguna vez besar a alguien de este grupo?",
+      "¿Qué parte del cuerpo te resulta más atractiva en una persona?",
+      "¿Cuál es tu mayor debilidad cuando alguien coquetea contigo?",
+      "¿Te atrae alguien de esta sala ahora mismo?",
+      "¿Cuál es el beso más intenso que recuerdas?",
+      "¿Qué tipo de contacto físico consigue ponerte nervioso?",
+      "¿Alguna vez has tenido química instantánea con alguien?",
+      "¿Qué es lo más atrevido que has hecho en una primera cita?",
+      "¿A quién de aquí aceptarías una cita esta misma noche?",
+      "¿Prefieres besar despacio o con intensidad?",
+      "¿Cuál es la indirecta más evidente que has lanzado?",
+      "¿Te has quedado con ganas de besar a alguien y no lo hiciste?",
+      "¿Qué gesto consigue que pierdas la concentración?",
+      "¿Alguna vez has ligado con dos personas del mismo grupo?",
+      "¿Cuál es tu mayor fantasía romántica?",
+      "¿Qué parte de un beso te gusta más?",
+      "¿Has enviado alguna vez un mensaje del que luego te arrepentiste?",
+      "¿Cuál es la mayor tensión que has sentido sin llegar a besaros?",
+      "¿Te gustaría que alguien de aquí diera el primer paso contigo?",
+      "¿Qué persona de aquí crees que besa mejor?",
+      "¿Alguna vez te has sentido atraído por alguien inesperado?",
+      "¿Qué outfit te parece más irresistible?",
+      "¿Has tenido alguna cita que terminara mucho mejor de lo esperado?",
+      "¿Qué te gusta que te susurren al oído?",
+      "¿Cuál es tu mayor punto débil físico?",
+      "¿Te has imaginado alguna vez teniendo una cita con alguien de aquí?",
+      "¿Qué te resulta más provocador: una mirada, una voz o un roce?",
+      "¿Alguna vez has besado a alguien solo por la tensión del momento?",
+      "¿Qué es lo más atrevido que harías hoy?",
+      "¿Con quién de aquí crees que tendrías más química?",
+      "¿Has fingido alguna vez que alguien no te atraía?",
+      "¿Cuál ha sido tu beso más inesperado?",
+      "¿Qué señal das cuando quieres que alguien te bese?",
+      "¿Qué persona de aquí te pone más nervioso?",
+      "¿Alguna vez has tenido una amistad con demasiada tensión?",
+      "¿Qué tipo de beso te gustaría recibir ahora?",
+      "¿Cuál ha sido tu mayor locura por alguien?",
+      "¿Qué te atreverías a confesar solo después de unas copas?",
+      "¿Has pensado hoy que alguien de aquí está especialmente atractivo?",
+      "¿A quién de aquí dejarías acercarse más de la cuenta?",
+      "¿Prefieres provocar o que te provoquen?",
+      "¿Cuál es la mayor mentira que has contado para ligar?",
+      "¿Has besado alguna vez a alguien sabiendo que era mala idea?",
+      "¿Qué te gustaría que alguien de aquí se atreviera a hacer?",
+      "¿Cuál es el lugar donde más te gusta que te besen sin contar los labios?",
+      "¿A quién de aquí mirarías si quisieras crear tensión?",
+      "¿Crees que esta noche podría pasar algo con alguien del grupo?",
+      "¿Quién de aquí se acerca más a tu tipo ideal?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    reto: [
+      "Elige a alguien y recread durante treinta segundos una cita que está a punto de terminar en beso.",
+      "Siéntate en el regazo de alguien que acepte hasta que vuelva a tocarte.",
+      "Deja que alguien te dé tres besos, cada uno un poco más cerca de los labios.",
+      "Baila cuerpo a cuerpo con quien elijas durante el estribillo de una canción.",
+      "Elige a alguien y susúrrale exactamente dónde te gustaría que te besara.",
+      "Túmbate junto a alguien y manteneos abrazados durante una ronda.",
+      "Deja que alguien te bese con los ojos vendados e intenta adivinar quién ha sido.",
+      "Elige a alguien y besa lentamente una zona de su cara que no sean los labios.",
+      "Haz que alguien se ponga frente a ti y acercaos hasta que uno decida detenerse.",
+      "Intercambia una prenda exterior con la persona que más te atraiga.",
+      "Elige a alguien y dale un masaje en la espalda durante un minuto.",
+      "Deja que una persona te tape los ojos y te dé un beso donde prefiera, evitando zonas íntimas.",
+      "Recrea con alguien una despedida en la puerta después de una cita con mucha química.",
+      "Elige a alguien y permanece abrazado por detrás durante toda una ronda.",
+      "Deja que el grupo escoja entre un beso en los labios, en el cuello o detrás de la oreja.",
+      "Haz un baile lento con alguien sin separar vuestros cuerpos.",
+      "Elige a alguien y mantened las manos en la cintura del otro durante treinta segundos.",
+      "Susurra una frase provocadora a tres personas y deja que el grupo elija la mejor reacción.",
+      "Deja que alguien dibuje con un dedo una palabra sobre tu espalda y adivina qué pone.",
+      "Elige a alguien y representa cómo le convencerías para quedarse contigo esa noche.",
+      "Da un beso de película a alguien que también quiera hacerlo.",
+      "Elige a alguien y pasa una ronda sentado entre sus piernas.",
+      "Deja que una persona te acerque hacia ella por la cintura y mantened la mirada.",
+      "Haz una fila de tres besos desde la mejilla hasta la comisura de los labios de alguien.",
+      "Elige a alguien y compartid una prenda grande o una manta durante dos rondas.",
+      "Deja que alguien te susurre al oído lo que haría si estuvierais completamente solos.",
+      "Elige a alguien y acaríciale el cuello o el pelo mientras os miráis durante veinte segundos.",
+      "Recrea con alguien el momento exacto anterior a un primer beso.",
+      "Deja que la persona de tu elección decida cómo debes darle un beso.",
+      "Elige a alguien y manteneos pegados mientras respondéis una pregunta del grupo.",
+      "Besa a alguien durante diez segundos sin tocarle con las manos.",
+      "Deja que alguien te dé un masaje mientras tú le dices qué te atrae de esa persona.",
+      "Elige a alguien y pasa un cubito de hielo por su cuello o su brazo.",
+      "Túmbate con alguien cabeza contra cabeza y contesta una pregunta comprometida.",
+      "Deja que alguien elija una zona no íntima de tu cuerpo para darte tres besos.",
+      "Elige a alguien y haced una foto que parezca tomada justo antes de besaros.",
+      "Abraza a alguien por la cintura y dile al oído qué fue lo primero que te atrajo.",
+      "Deja que una persona te bese y califica el beso con una sola palabra.",
+      "Elige a alguien y fingid que intentáis besaros a escondidas del resto del grupo.",
+      "Haz un camino de besos desde la mano hasta el hombro de alguien.",
+      "Deja que alguien te coloque en la postura que usaríais para una foto muy provocadora.",
+      "Elige a alguien y mantén tu cara junto a su cuello durante quince segundos sin besarle.",
+      "Comparte un dulce con alguien sin usar las manos.",
+      "Deja que el grupo elija con quién debes representar una escena de tensión en un ascensor.",
+      "Elige a alguien y pasa una ronda con vuestra frente y nariz rozándose cada vez que habléis.",
+      "Da un beso en los labios a alguien y después susúrrale cómo repetirías el momento.",
+      "Deja que alguien te quite lentamente una prenda exterior y se la ponga.",
+      "Elige a alguien y cread una señal secreta para pedir un beso durante el resto del juego.",
+      "Ponte detrás de alguien, rodéale la cintura y susúrrale una invitación difícil de rechazar.",
+      "Elige a alguien y decidid en privado qué reto físico queréis hacer juntos ante el grupo.",
+      // AÑADIR MÁS AQUÍ
+    ],
+    quien_es_mas: [
+      "¿Quién es más probable que bese a alguien esta noche?",
+      "¿Quién es más probable que tenga una aventura inesperada?",
+      "¿Quién es más probable que ligue sin decir una sola palabra?",
+      "¿Quién es más probable que termine la noche acompañado?",
+      "¿Quién es más probable que se bese con alguien del grupo?",
+      "¿Quién es más probable que tenga una fantasía con alguien de aquí?",
+      "¿Quién es más probable que dé el primer paso?",
+      "¿Quién es más probable que provoque tensión con una mirada?",
+      "¿Quién es más probable que bese mejor?",
+      "¿Quién es más probable que tenga más química con un desconocido?",
+      "¿Quién es más probable que se atreva con un beso inesperado?",
+      "¿Quién es más probable que oculte que alguien le atrae?",
+      "¿Quién es más probable que se líe con un amigo?",
+      "¿Quién es más probable que mande un mensaje atrevido esta noche?",
+      "¿Quién es más probable que acepte una cita improvisada?",
+      "¿Quién es más probable que tenga un romance secreto?",
+      "¿Quién es más probable que se ponga nervioso al acercarse a alguien?",
+      "¿Quién es más probable que tenga una mirada irresistible?",
+      "¿Quién es más probable que bese en la primera cita?",
+      "¿Quién es más probable que tenga más de una persona interesada?",
+      "¿Quién es más probable que termine abrazado con alguien?",
+      "¿Quién es más probable que confiese una atracción esta noche?",
+      "¿Quién es más probable que baile pegado con alguien?",
+      "¿Quién es más probable que se enamore después de un beso?",
+      "¿Quién es más probable que tenga una amistad con mucha tensión?",
+      "¿Quién es más probable que se atreva a besar a su crush?",
+      "¿Quién es más probable que haga subir la temperatura del juego?",
+      "¿Quién es más probable que tenga una cita secreta con alguien de aquí?",
+      "¿Quién es más probable que caiga ante una buena mirada?",
+      "¿Quién es más probable que tenga una noche inolvidable?",
+      "¿Quién es más probable que se quede a dormir con alguien?",
+      "¿Quién es más probable que mande una foto provocadora?",
+      "¿Quién es más probable que tenga el beso más apasionado?",
+      "¿Quién es más probable que flirtee con varias personas a la vez?",
+      "¿Quién es más probable que no pueda resistirse a alguien del grupo?",
+      "¿Quién es más probable que se acerque demasiado al hablar?",
+      "¿Quién es más probable que provoque sin darse cuenta?",
+      "¿Quién es más probable que tenga un flechazo esta noche?",
+      "¿Quién es más probable que termine teniendo una cita mañana?",
+      "¿Quién es más probable que tenga más historias picantes?",
+      "¿Quién es más probable que se deje llevar por el momento?",
+      "¿Quién es más probable que se bese con alguien que acaba de conocer?",
+      "¿Quién es más probable que tenga una atracción prohibida?",
+      "¿Quién es más probable que confunda un reto con una oportunidad?",
+      "¿Quién es más probable que termine sentado en el regazo de alguien?",
+      "¿Quién es más probable que reciba más besos esta noche?",
+      "¿Quién es más probable que se atreva con el reto más fuerte?",
+      "¿Quién es más probable que cree tensión con alguien inesperado?",
+      "¿Quién es más probable que salga del juego con una nueva historia?",
+      "¿Quién es más probable que hoy pase de las miradas a los hechos?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    con_quien: [
+      "¿Con quién de aquí te darías un beso largo?",
+      "¿Con quién de aquí tendrías una cita esta misma noche?",
+      "¿Con quién de aquí bailarías muy pegado?",
+      "¿Con quién de aquí compartirías cama sin que tuviera que pasar nada?",
+      "¿Con quién de aquí crees que tendrías más tensión?",
+      "¿Con quién de aquí te quedarías a solas?",
+      "¿Con quién de aquí te darías un beso en el cuello?",
+      "¿Con quién de aquí tendrías una aventura de una noche?",
+      "¿Con quién de aquí te sentarías en el regazo?",
+      "¿Con quién de aquí te irías de escapada romántica?",
+      "¿Con quién de aquí aceptarías un beso sorpresa?",
+      "¿Con quién de aquí crees que besarías mejor?",
+      "¿Con quién de aquí tendrías una cita sin contárselo al grupo?",
+      "¿Con quién de aquí te quedarías hablando en la cama hasta tarde?",
+      "¿Con quién de aquí te atreverías a dormir abrazado?",
+      "¿Con quién de aquí tendrías más química física?",
+      "¿Con quién de aquí dejarías que te besara primero?",
+      "¿Con quién de aquí compartirías una ducha sin intención de ir más allá?",
+      "¿Con quién de aquí tendrías una cena que terminara en beso?",
+      "¿Con quién de aquí mantendrías una mirada hasta ponerte nervioso?",
+      "¿Con quién de aquí te irías a un lugar apartado?",
+      "¿Con quién de aquí dejarías que te susurrara algo al oído?",
+      "¿Con quién de aquí te gustaría tener más contacto físico?",
+      "¿Con quién de aquí te besarías si nadie fuera a enterarse?",
+      "¿Con quién de aquí compartirías una noche de hotel?",
+      "¿Con quién de aquí tendrías una relación secreta?",
+      "¿Con quién de aquí te gustaría despertar después de una fiesta?",
+      "¿Con quién de aquí aceptarías una cita con final abierto?",
+      "¿Con quién de aquí te dejarías llevar por el momento?",
+      "¿Con quién de aquí tendrías una conversación muy íntima?",
+      "¿Con quién de aquí aceptarías bailar cuerpo con cuerpo?",
+      "¿Con quién de aquí te besarías bajo la lluvia?",
+      "¿Con quién de aquí te irías de la fiesta antes de tiempo?",
+      "¿Con quién de aquí crees que habría más tensión en un ascensor?",
+      "¿Con quién de aquí te quedarías abrazado durante toda una película?",
+      "¿Con quién de aquí tendrías una cita en casa?",
+      "¿Con quién de aquí te atreverías a compartir una confesión picante?",
+      "¿Con quién de aquí te gustaría probar si existe química?",
+      "¿Con quién de aquí te darías un beso de película?",
+      "¿Con quién de aquí pasarías una noche sin móviles?",
+      "¿Con quién de aquí te gustaría tener una primera cita intensa?",
+      "¿Con quién de aquí te pondrías más nervioso estando a solas?",
+      "¿Con quién de aquí dejarías que te diera un masaje?",
+      "¿Con quién de aquí tendrías una relación sin etiquetas?",
+      "¿Con quién de aquí te atreverías a cruzar la línea de la amistad?",
+      "¿Con quién de aquí compartirías una noche de besos?",
+      "¿Con quién de aquí aceptarías ir a su casa después de la fiesta?",
+      "¿Con quién de aquí tendrías un romance de verano?",
+      "¿Con quién de aquí crees que podría pasar algo esta noche?",
+      "¿Con quién de aquí te gustaría descubrir hasta dónde llega la tensión?",
+      // AÑADIR MÁS AQUÍ
+    ],
+  },
+
+  // Nivel BESTIA: banco semilla más corto a propósito.
+  // Mantiene el principio: empuja oportunidades, nunca obliga desenlaces.
+  bestia: {
+    del_1_al: [
+      "¿Os quitáis la ropa interior en el baño y se la dais a alguien del grupo?",
+      "¿Os vais juntos al baño durante tres minutos?",
+      "¿Os quitáis una prenda y se la ponéis a la otra persona?",
+      "¿Os dais un beso intenso contra una pared?",
+      "¿Os quedáis en ropa interior durante una ronda?",
+      "¿Os metéis juntos bajo una manta sin que nadie pueda mirar?",
+      "¿Os besáis durante un minuto sin separaros?",
+      "¿Os quitáis mutuamente una prenda de la parte de arriba?",
+      "¿Os sentáis a horcajadas uno sobre el otro durante dos rondas?",
+      "¿Os vais a otra habitación y cerráis la puerta durante dos minutos?",
+      "¿Os dais besos por el cuello hasta que termine la ronda?",
+      "¿Os cambiáis una prenda íntima entre vosotros en privado?",
+      "¿Os quitáis una prenda cada uno y las intercambiáis?",
+      "¿Os tumbáis juntos y os tapáis con una manta durante dos rondas?",
+      "¿Os besáis mientras uno mantiene las manos bajo la camiseta del otro?",
+      "¿Os dejáis una marca de beso en una zona oculta?",
+      "¿Os besáis en el baño y volvéis sin contar qué ha pasado?",
+      "¿Os quitáis los pantalones o la falda durante una ronda?",
+      "¿Os dais un masaje por debajo de la camiseta durante un minuto?",
+      "¿Os metéis juntos en la ducha vestidos o en ropa interior?",
+      "¿Os besáis tumbados durante treinta segundos?",
+      "¿Os quitáis una prenda íntima y la guardáis en el bolsillo de la otra persona?",
+      "¿Os dais un beso con uno sentado y el otro encima?",
+      "¿Os vais cinco minutos a un lugar donde nadie pueda veros?",
+      "¿Os dejáis quitar una prenda sin usar las manos?",
+      "¿Os besáis con las luces apagadas durante un minuto?",
+      "¿Os metéis juntos en una cama y cerráis la puerta durante tres minutos?",
+      "¿Os quitáis mutuamente una prenda usando solo la boca?",
+      "¿Os dais besos desde el cuello hasta la cintura por encima de la ropa?",
+      "¿Os quedáis únicamente con dos prendas durante una ronda?",
+      "¿Os dais un beso mientras uno mantiene al otro contra la pared?",
+      "¿Os susurráis exactamente qué os gustaría hacer después del juego?",
+      "¿Os metéis en el baño y volvéis con una prenda menos cada uno?",
+      "¿Os besáis bajo una manta durante toda una ronda?",
+      "¿Os tocáis por encima de la ropa durante treinta segundos donde ambos permitáis?",
+      "¿Os quitáis una prenda íntima y la escondéis en algún lugar?",
+      "¿Os cambiáis de ropa completa en privado y volvéis con la ropa del otro?",
+      "¿Os dais un beso intenso mientras el grupo cuenta hasta sesenta?",
+      "¿Os vais a una habitación y hacéis un reto privado acordado?",
+      "¿Os quedáis juntos en ropa interior durante dos rondas?",
+      "¿Os besáis mientras uno desabrocha lentamente una prenda del otro?",
+      "¿Os quitáis una prenda y dejáis que el otro decida cuándo la recuperáis?",
+      "¿Os tumbáis uno encima del otro durante un minuto?",
+      "¿Os besáis después de confesar qué haríais estando solos?",
+      "¿Os metéis en un armario, baño o habitación pequeña durante tres minutos?",
+      "¿Os quitáis una prenda íntima y se la dais a la persona que más os atraiga?",
+      "¿Os quedáis sin camiseta durante las próximas tres rondas?",
+      "¿Os besáis mientras uno guía las manos del otro por donde permita?",
+      "¿Os vais juntos durante cinco minutos y hacéis lo que ambos decidáis?",
+      "¿Os dais un beso, os quitáis una prenda cada uno y seguís juntos hasta el final?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    verdad: [
+      "¿Te has tocado pensando en alguien de aquí?",
+      "¿Te has puesto cachondo por alguien de esta sala?",
+      "¿Has soñado alguna vez con alguien de esta sala?",
+      "¿Te has imaginado en la cama con alguien de aquí?",
+      "¿Hay alguien aquí con quien no dirías que no a nada esta noche?",
+      "¿Te has fijado en el cuerpo de alguien de aquí al llegar?",
+      "¿Con quién de aquí te costaría más parar si empezarais algo?",
+      "¿Alguien de aquí te ha puesto nervioso físicamente esta noche?",
+      "¿Has pensado en besar a alguien de esta sala en la última hora?",
+      "¿Con quién de aquí borrarías la línea de la amistad ahora mismo?",
+      "¿Te has arrepentido de no haber tenido algo con alguien presente?",
+      "¿Hay alguien aquí que te atraiga más de lo que has admitido?",
+      "¿Con quién de aquí terminarías la noche sin pensarlo demasiado?",
+      "¿A quién de aquí te gustaría ver en ropa interior?",
+      "¿Con quién te encerrarías ahora mismo en el baño?",
+      "¿Has fantaseado con alguien presente esta noche?",
+      "¿A quién dejarías quitarte una prenda?",
+      "¿Con quién de aquí compartirías cama?",
+      "¿Quién crees que tendría más facilidad para hacerte perder el control?",
+      "¿A quién besarías contra una pared?",
+      "¿Con quién tendrías una aventura de una sola noche?",
+      "¿Quién de aquí crees que besa mejor?",
+      "¿A quién dejarías meterse contigo bajo una manta?",
+      "¿Con quién te irías sin despedirte del resto?",
+      "¿Qué es lo más fuerte que has hecho durante una fiesta?",
+      "¿Has acabado alguna vez sin ropa después de un juego?",
+      "¿Con quién aceptarías ducharte?",
+      "¿A quién de aquí dejarías verte cambiarte?",
+      "¿Quién te parece más peligroso estando a solas?",
+      "¿Con quién tendrías una relación puramente física?",
+      "¿A quién le darías tu ropa interior?",
+      "¿Has enviado alguna vez una foto íntima?",
+      "¿A quién dejarías decidir hasta dónde llegar?",
+      "¿Qué parte del cuerpo te gusta más besar?",
+      "¿Qué zona te gusta más que te besen?",
+      "¿Has tenido algo con más de una persona del mismo grupo?",
+      "¿A quién invitarías a dormir contigo esta noche?",
+      "¿Quién crees que te haría romper tus propias reglas?",
+      "¿Con quién probarías algo que nunca has hecho?",
+      "¿Cuál es tu fantasía más fuerte que realmente cumplirías?",
+      "¿A quién te gustaría ver quitándose una prenda lentamente?",
+      "¿Has tenido alguna vez algo en un baño durante una fiesta?",
+      "¿Con quién de aquí te dejarías llevar sin planear nada?",
+      "¿Quién podría convencerte de desaparecer cinco minutos?",
+      "¿Con quién te besarías aunque supieras que es mala idea?",
+      "¿A quién dejarías tocarte por encima de la ropa?",
+      "¿Qué es lo más atrevido que aceptarías hacer hoy?",
+      "¿Con quién tendrías una noche secreta?",
+      "¿Quién te pone más nervioso cuando se acerca demasiado?",
+      "¿A quién dejarías tumbarse encima de ti?",
+      "¿Con quién te gustaría comprobar si la tensión es real?",
+      "¿Qué persona te atrae físicamente más de lo que admitirías normalmente?",
+      "¿Has usado alguna vez un juego como excusa para besar a alguien?",
+      "¿A quién dejarías desabrocharte una prenda?",
+      "¿Con quién pasarías una noche entera sin salir de una habitación?",
+      "¿Te has imaginado a alguien presente sin ropa?",
+      "¿A quién besarías si se apagaran ahora mismo todas las luces?",
+      "¿Con quién te gustaría despertarte mañana?",
+      "¿Quién crees que sería más intenso en privado?",
+      "¿A quién darías permiso para elegir vuestro reto?",
+      "¿Con quién repetirías varias veces durante la misma noche?",
+      "¿A quién escogerías para desaparecer ahora mismo?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    reto: [
+      "Elige a alguien y desapareced cinco minutos sin contar después qué habéis hecho.",
+      "Entrega una prenda íntima a la persona que más te atraiga.",
+      "Elige a alguien y volved del baño con una prenda menos cada uno.",
+      "Deja que una persona te quite lentamente una prenda exterior.",
+      "Escoge a alguien y encerrad juntos la puerta durante tres minutos.",
+      "Elige a alguien y besaos contra una pared durante treinta segundos.",
+      "Deja que alguien decida si te quitas la camiseta o los pantalones.",
+      "Elige a una persona y quedaos juntos bajo una manta durante dos rondas.",
+      "Escoge a alguien y cambiad una prenda entre vosotros en privado.",
+      "Deja que la persona que más te atraiga te siente sobre ella durante una ronda.",
+      "Elige a alguien y haced juntos el reto privado que más os apetezca.",
+      "Deja que alguien te dé besos desde el cuello hasta la cintura por encima de la ropa.",
+      "Escoge a una persona y bailad cuerpo a cuerpo durante una canción completa.",
+      "Elige a alguien y deja que guíe tus manos por donde permita.",
+      "Deja que una persona te desabroche lentamente una prenda.",
+      "Escoge a alguien y recread una escena de beso contra la puerta de una habitación.",
+      "Elige a alguien y pasad una ronda tumbados juntos.",
+      "Deja que la persona elegida decida qué prenda exterior debes quitarte.",
+      "Escoge a alguien y besaos con las luces apagadas durante un minuto.",
+      "Elige a una persona y susúrrale qué harías si estuvierais solos.",
+      "Deja que alguien esconda una de tus prendas y no te diga dónde.",
+      "Escoge a alguien y entrad juntos en la ducha vestidos o en ropa interior.",
+      "Elige a una persona y cambiad de ropa completa en privado.",
+      "Deja que alguien te dé un masaje bajo la camiseta durante un minuto.",
+      "Escoge a alguien y besaos mientras uno está sentado y el otro encima.",
+      "Elige a alguien y quedaos sin camiseta durante dos rondas.",
+      "Deja que una persona te quite una prenda sin usar las manos.",
+      "Escoge a alguien y compartid cama durante las próximas dos rondas.",
+      "Elige a una persona y deja que coloque tus manos donde se sienta cómoda.",
+      "Deja que alguien te dé tres besos en zonas no íntimas elegidas por ti.",
+      "Escoge a alguien y haced una foto privada juntos en ropa interior.",
+      "Elige a una persona y besaos hasta que alguien del grupo os interrumpa.",
+      "Deja que la persona que elijas guarde una de tus prendas íntimas hasta el final.",
+      "Escoge a alguien y haced una entrada al grupo como si acabarais de hacer algo.",
+      "Elige a una persona y dejaos una marca de beso en una zona oculta.",
+      "Deja que alguien decida entre besarte, desvestirte parcialmente o llevarte aparte.",
+      "Escoge a alguien y quedaos abrazados cuerpo a cuerpo durante una ronda.",
+      "Elige a una persona y haced juntos algo que llevéis evitando toda la noche.",
+      "Deja que el grupo forme una pareja voluntaria para meterse bajo una manta.",
+      "Escoge a alguien y recread cómo terminaría una noche juntos sin llegar a hacerlo.",
+      "Elige a una persona y cambiad una prenda íntima en privado.",
+      "Deja que alguien te bese mientras te mantiene contra la pared.",
+      "Escoge a alguien y apartaos para acordar una promesa para después del juego.",
+      "Elige a una persona y deja que decida cómo debe ser vuestro beso.",
+      "Deja que alguien te tape los ojos y te bese; después intenta adivinar quién fue.",
+      "Escoge a alguien y pasad tres minutos en un lugar donde nadie pueda veros.",
+      "Elige a una persona y quitad una prenda cada uno al mismo tiempo.",
+      "Deja que alguien te diga al oído qué quiere hacer contigo y responde sí o no.",
+      "Escoge a la persona que más te atraiga y proponle continuar la noche en privado.",
+      "Elige a alguien que también te elija y desapareced juntos durante cinco minutos.",
+      // AÑADIR MÁS AQUÍ
+    ],
+    quien_es_mas: [
+      "¿Quién es más probable que termine la noche sin ropa?",
+      "¿Quién es más probable que desaparezca con alguien?",
+      "¿Quién es más probable que se vaya al baño acompañado?",
+      "¿Quién es más probable que entregue su ropa interior?",
+      "¿Quién es más probable que se bese con más de una persona?",
+      "¿Quién es más probable que acabe compartiendo cama?",
+      "¿Quién es más probable que termine contra una pared?",
+      "¿Quién es más probable que se quite una prenda primero?",
+      "¿Quién es más probable que proponga ir a otra habitación?",
+      "¿Quién es más probable que tenga una aventura de una noche?",
+      "¿Quién es más probable que acabe bajo una manta con alguien?",
+      "¿Quién es más probable que se duche acompañado?",
+      "¿Quién es más probable que pierda el control?",
+      "¿Quién es más probable que tenga más experiencia?",
+      "¿Quién es más probable que mande una foto íntima?",
+      "¿Quién es más probable que tenga una fantasía con alguien presente?",
+      "¿Quién es más probable que cambie de ropa con otra persona?",
+      "¿Quién es más probable que acabe besándose en el baño?",
+      "¿Quién es más probable que duerma acompañado esta noche?",
+      "¿Quién es más probable que acepte un reto privado?",
+      "¿Quién es más probable que se deje quitar una prenda?",
+      "¿Quién es más probable que lleve la iniciativa?",
+      "¿Quién es más probable que prefiera dejarse llevar?",
+      "¿Quién es más probable que se lie con alguien inesperado?",
+      "¿Quién es más probable que salga del baño con menos ropa?",
+      "¿Quién es más probable que se meta en una cama con alguien?",
+      "¿Quién es más probable que pruebe algo nuevo esta noche?",
+      "¿Quién es más probable que bese a alguien por puro impulso?",
+      "¿Quién es más probable que tenga una noche secreta?",
+      "¿Quién es más probable que se quede en ropa interior?",
+      "¿Quién es más probable que comparta una ducha?",
+      "¿Quién es más probable que se quite la camiseta sin pensarlo?",
+      "¿Quién es más probable que entregue una prenda íntima?",
+      "¿Quién es más probable que acabe tumbado encima de alguien?",
+      "¿Quién es más probable que continúe el juego en privado?",
+      "¿Quién es más probable que tenga química con varias personas?",
+      "¿Quién es más probable que se encierre en una habitación?",
+      "¿Quién es más probable que se deje llevar por el alcohol?",
+      "¿Quién es más probable que rechace el alcohol pero acepte el reto?",
+      "¿Quién es más probable que termine besándose con su amistad?",
+      "¿Quién es más probable que se vaya antes acompañado?",
+      "¿Quién es más probable que tenga la historia más fuerte de mañana?",
+      "¿Quién es más probable que acabe intercambiando ropa?",
+      "¿Quién es más probable que se atreva con el reto más salvaje?",
+      "¿Quién es más probable que se bese con las luces apagadas?",
+      "¿Quién es más probable que deje una marca de beso?",
+      "¿Quién es más probable que duerma fuera de casa?",
+      "¿Quién es más probable que repita con la misma persona?",
+      "¿Quién es más probable que forme pareja antes de acabar?",
+      "¿Quién es más probable que convierta el juego en una noche inolvidable?",
+      // AÑADIR MÁS AQUÍ
+    ],
+    con_quien: [
+      "¿Con quién de aquí te quitarías la ropa interior en el baño?",
+      "¿Con quién de aquí desaparecerías cinco minutos?",
+      "¿Con quién de aquí compartirías cama?",
+      "¿Con quién de aquí te quedarías en ropa interior?",
+      "¿Con quién de aquí te meterías bajo una manta?",
+      "¿Con quién de aquí te besarías contra una pared?",
+      "¿Con quién de aquí entrarías en la ducha?",
+      "¿Con quién de aquí te encerrarías en una habitación?",
+      "¿Con quién de aquí intercambiarías una prenda íntima?",
+      "¿Con quién de aquí pasarías toda la noche?",
+      "¿Con quién de aquí dejarías que te quitara una prenda?",
+      "¿Con quién de aquí te irías al baño?",
+      "¿Con quién de aquí dormirías hoy?",
+      "¿Con quién de aquí tendrías una aventura de una noche?",
+      "¿Con quién de aquí probarías algo nuevo?",
+      "¿Con quién de aquí dejarías que tomara el control?",
+      "¿Con quién de aquí te quedarías completamente a solas?",
+      "¿Con quién de aquí te cambiarías de ropa?",
+      "¿Con quién de aquí te besarías tumbado?",
+      "¿Con quién de aquí compartirías una ducha en ropa interior?",
+      "¿Con quién de aquí te dejarías llevar sin pensar demasiado?",
+      "¿Con quién de aquí tendrías una relación puramente física?",
+      "¿Con quién de aquí dejarías que te desabrochara una prenda?",
+      "¿Con quién de aquí te gustaría despertar mañana?",
+      "¿Con quién de aquí tendrías una noche secreta?",
+      "¿Con quién de aquí te meterías en una cama ahora mismo?",
+      "¿Con quién de aquí te quitarías una prenda delante del resto?",
+      "¿Con quién de aquí aceptarías un reto privado?",
+      "¿Con quién de aquí dejarías que guiara tus manos?",
+      "¿Con quién de aquí tendrías más química física?",
+      "¿Con quién de aquí te quedarías bajo una manta dos rondas?",
+      "¿Con quién de aquí te darías un beso de un minuto?",
+      "¿Con quién de aquí saldrías del baño con menos ropa?",
+      "¿Con quién de aquí compartirías habitación en un hotel?",
+      "¿Con quién de aquí te besarías con las luces apagadas?",
+      "¿Con quién de aquí dejarías una marca de beso?",
+      "¿Con quién de aquí desaparecerías hasta que fueran a buscaros?",
+      "¿Con quién de aquí aceptarías cambiarte de ropa?",
+      "¿Con quién de aquí pasarías cinco minutos sin cámaras ni miradas?",
+      "¿Con quién de aquí te atreverías a cruzar la línea de la amistad?",
+      "¿Con quién de aquí te sentarías a horcajadas?",
+      "¿Con quién de aquí intercambiarías una prenda durante toda la noche?",
+      "¿Con quién de aquí te irías antes de que acabara la fiesta?",
+      "¿Con quién de aquí aceptarías quedarte sin camiseta?",
+      "¿Con quién de aquí repetirías varias veces?",
+      "¿Con quién de aquí te gustaría comprobar si la tensión es real?",
+      "¿Con quién de aquí dejarías que eligiera vuestro reto?",
+      "¿Con quién de aquí tendrías una noche que nadie conocería?",
+      "¿Con quién de aquí continuarías el juego en privado?",
+      "¿Con quién de aquí te irías ahora mismo si también te eligiera?",
+      // AÑADIR MÁS AQUÍ
+    ],
+  },
+
+};
+
+/* Categorías con orden fijo para la ruleta.
+   weight = probabilidad relativa (ponderación pedida).
+   interactive = true si la carta implica elegir a OTRA persona.
+   bebible = true si el reto se puede rechazar bebiendo (no aplica a
+   verdad —hay que responder— ni a quién es más probable). */
+const CATS = [
+  { key:"reto",         label:"Reto",                    color:"#ff2e88", weight:3, interactive:false, bebible:true  },
+  { key:"con_quien",    label:"Con quién de aquí",       color:"#7b5cff", weight:3, interactive:true,  bebible:true  },
+  { key:"verdad",       label:"Verdad",                  color:"#3ddc97", weight:2, interactive:false, bebible:false },
+  { key:"del_1_al",     label:"Del 1 al…",               color:"#ffd15c", weight:1, interactive:true,  bebible:true  },
+  { key:"quien_es_mas", label:"Quién es más probable",   color:"#ff8a3d", weight:1, interactive:false, bebible:false },
+];
+
+// Tragos de penalización por nivel si no haces el reto.
+const TRAGOS = { suave:1, picante:2, bestia:3 };
+
+/* ============================================================
+   EVENTOS ALEATORIOS
+   Tras cada tirada, cada evento tiene PROB_EVENTO de saltar (lotería).
+   tipo: "social" | "dinamica" | "regla"
+   - social/dinamica: duran esa tirada (dinamica afecta a la siguiente).
+   - regla: persistente; dura una RONDA = nº de jugadores (en tiradas).
+   Todo es de honor: la app muestra y cuenta, los jugadores ejecutan.
+   >>> AÑADIR MÁS EVENTOS: añade objetos a la lista sin tocar la lógica.
+   ============================================================ */
+const PROB_EVENTO = 0.20;
+
+const EVENTOS = [
+  // --- Beber sociales ---
+  { tipo:"social", texto:"Brindis general: todos beben un trago." },
+  { tipo:"social", texto:"Elige a alguien para beber contigo." },
+  { tipo:"social", texto:"Reparte 3 tragos entre quien quieras." },
+  { tipo:"social", texto:"El último que llegó a la fiesta bebe." },
+  { tipo:"social", texto:"Todos los que estén bebiendo lo mismo, un trago juntos." },
+  { tipo:"social", texto:"Bebe tú y elige a alguien que se libra de esta ronda." },
+  { tipo:"social", texto:"La persona a tu derecha y tú brindáis y bebéis." },
+  { tipo:"social", texto:"Todos menos tú beben un trago. Has tenido suerte." },
+  // --- Dinámica (afectan a la siguiente tirada) ---
+  { tipo:"dinamica", texto:"Pasa tu turno: quien salga en la próxima tirada decide si lo hace o se lo pasa a quien elija." },
+  { tipo:"dinamica", texto:"Lo elige el grupo: en la próxima tirada, el reto lo decide el grupo, no la ruleta." },
+  // --- Reglas persistentes (duran 1 ronda = nº jugadores) ---
+  { tipo:"regla", texto:"Prohibido decir nombres propios. Quien lo diga, bebe." },
+  { tipo:"regla", texto:'Prohibido decir "sí" y "no". Quien caiga, bebe.' },
+  { tipo:"regla", texto:"Nadie puede dejar el vaso en la mesa. Quien lo haga, bebe." },
+  // AÑADIR MÁS AQUÍ
+];
+
+/* ============================================================
+   ESTADO + PERSISTENCIA (localStorage con guardas)
+   ============================================================ */
+const LS_KEY = "ruleta_v1";
+
+const state = {
+  players: ["Jugador 1","Jugador 2"],
+  genders: {"Jugador 1":"H","Jugador 2":"M"}, // nombre -> "H"|"M"|null
+  level: "picante",
+  pairs: [],
+  usedCards: {},
+  cupidTurn: 0,
+  cycle: [],
+  reglaActiva: null,   // {texto, quedan} regla persistente en curso
+  vibra: true,         // ajuste: vibración
+  sonido: true,        // ajuste: sonido
+};
+
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  catch(e){ /* Safari privado puede fallar: seguimos en memoria */ }
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(Array.isArray(d.players) && d.players.length) state.players = d.players;
+    if(d.genders && typeof d.genders==="object") state.genders = d.genders;
+    if(d.level && BANCO[d.level]) state.level = d.level;
+    if(Array.isArray(d.pairs)) state.pairs = d.pairs;
+    if(d.usedCards && typeof d.usedCards==="object") state.usedCards = d.usedCards;
+    if(typeof d.cupidTurn==="number") state.cupidTurn = d.cupidTurn;
+    if(Array.isArray(d.cycle)) state.cycle = d.cycle;
+    if(d.reglaActiva && typeof d.reglaActiva==="object") state.reglaActiva = d.reglaActiva;
+    if(typeof d.vibra==="boolean") state.vibra = d.vibra;
+    if(typeof d.sonido==="boolean") state.sonido = d.sonido;
+  }catch(e){ /* datos corruptos: arrancamos limpios */ }
+}
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const rand = n => Math.floor(Math.random()*n);
+function pick(arr){ return arr[rand(arr.length)]; }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=rand(i+1); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function pickWeighted(items){
+  const total = items.reduce((s,i)=>s+i.weight,0);
+  let r = Math.random()*total;
+  for(const it of items){ if((r-=it.weight)<0) return it; }
+  return items[items.length-1];
+}
+function showToast(msg){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._id); t._id=setTimeout(()=>t.classList.remove("show"),1600);
+}
+
+/* ============================================================
+   FEEDBACK: vibración + sonido (todo nativo, sin archivos externos)
+   ============================================================ */
+function vibrar(patron){
+  if(!state.vibra) return;
+  if(navigator.vibrate) navigator.vibrate(patron);
+}
+
+// Web Audio: se genera el tono por código. Se crea al primer toque
+// (Safari iOS exige gesto del usuario para arrancar el audio).
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    catch(e){ audioCtx=null; }
+  }
+  if(audioCtx && audioCtx.state==="suspended") audioCtx.resume();
+}
+function beep(freq, dur, type, vol){
+  if(!state.sonido || !audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type=type||"sine"; o.frequency.value=freq;
+  g.gain.value=vol||0.06;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t=audioCtx.currentTime;
+  o.start(t);
+  g.gain.setValueAtTime(vol||0.06,t);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.12));
+  o.stop(t+(dur||0.12));
+}
+// Tic-tic de la ruleta girando: una serie de clics que se van espaciando.
+function sonidoRuleta(){
+  if(!state.sonido || !audioCtx) return;
+  let delay=0, gap=60;
+  for(let i=0;i<28;i++){
+    setTimeout(()=>beep(1200,0.03,"square",0.03), delay);
+    delay+=gap; gap*=1.12;   // desacelera como la rueda
+  }
+}
+function sonidoParada(){ beep(440,0.14,"triangle",0.09); setTimeout(()=>beep(660,0.16,"triangle",0.09),90); }
+function sonidoEvento(){ beep(523,0.12,"sine",0.08); setTimeout(()=>beep(784,0.14,"sine",0.08),110); setTimeout(()=>beep(1046,0.18,"sine",0.08),230); }
+
+/* ============================================================
+   CONFETI (canvas, sin librerías)
+   ============================================================ */
+function lanzarConfeti(){
+  const cv=$("#confetti"); if(!cv) return;
+  const ctx=cv.getContext("2d");
+  const W=cv.width=cv.offsetWidth, H=cv.height=cv.offsetHeight;
+  const cols=["#ff2e88","#7b5cff","#ffd15c","#3ddc97","#ff8a3d","#f6f6f6"];
+  const N=120, parts=[];
+  for(let i=0;i<N;i++){
+    parts.push({
+      x:Math.random()*W, y:-20-Math.random()*H*0.5,
+      vx:(Math.random()-0.5)*3, vy:2+Math.random()*4,
+      s:5+Math.random()*7, rot:Math.random()*6.28,
+      vr:(Math.random()-0.5)*0.3, c:pick(cols),
+    });
+  }
+  let frames=0;
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.05; p.rot+=p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);
+      ctx.restore();
+    });
+    frames++;
+    if(frames<150) requestAnimationFrame(tick);
+    else ctx.clearRect(0,0,W,H);
+  }
+  tick();
+}
+
+/* ============================================================
+   NO-REPETICIÓN
+   Devuelve un índice de frase no usado para nivel+categoría.
+   Al agotarse el banco de esa combinación, rebaraja (vacía usados).
+   Funciona con cualquier número de frases.
+   ============================================================ */
+function nextCardIndex(level, catKey){
+  const list = BANCO[level][catKey];
+  if(!list || !list.length) return -1;
+  const id = level+"|"+catKey;
+  let used = state.usedCards[id] || [];
+  if(used.length >= list.length){ used = []; }        // agotado -> rebaraja
+  const free = [];
+  for(let i=0;i<list.length;i++){ if(!used.includes(i)) free.push(i); }
+  const chosen = pick(free);
+  used.push(chosen);
+  state.usedCards[id] = used;
+  return chosen;
+}
+
+// Devuelve los jugadores que pueden ser {otro} dado el protagonista.
+// Regla: H+H nunca; H+M y M+M sí. Si género no definido, sin restricción.
+function validPartners(jugador){
+  const gJ = state.genders[jugador];
+  return state.players.filter(p=>{
+    if(p===jugador) return false;
+    if(!gJ) return true;               // protagonista sin género -> cualquiera
+    const gP = state.genders[p];
+    if(!gP) return true;               // pareja sin género -> permitida
+    if(gJ==="H" && gP==="H") return false; // H+H prohibido
+    return true;
+  });
+}
+/* ============================================================
+   ASIGNACIÓN DE JUGADORES (ciclo barajado + sesgo cupido)
+   Reglas:
+   - El PROTAGONISTA ({jugador}) sale por ciclos: cada jugador aparece
+     una vez por ciclo; al vaciarse el ciclo se rebaraja con orden nuevo.
+   - Cupido (slots 0 y 3 de cada 5) fuerza que el protagonista sea de la
+     pareja, y ESE turno consume su aparición del ciclo (opción a).
+   - {otro} (segunda persona en cartas interactivas) se elige al azar
+     entre el resto y NO entra en el ciclo.
+   ============================================================ */
+
+// Saca el siguiente protagonista del ciclo. Si el ciclo está vacío,
+// lo rellena barajando a todos los jugadores.
+function refillCycleIfNeeded(){
+  // Purga nombres que ya no existen (jugadores borrados).
+  state.cycle = state.cycle.filter(n=>state.players.includes(n));
+  if(state.cycle.length===0){
+    state.cycle = shuffle(state.players);
+  }
+}
+
+// Si el jugador pertenece a una pareja cupido, devuelve su compañero; si no, null.
+function cupidPartnerOf(jugador){
+  for(const p of state.pairs){
+    if(p.a===jugador) return p.b;
+    if(p.b===jugador) return p.a;
+  }
+  return null;
+}
+
+function assignPlayers(cat){
+  let jugador, otro=null;
+
+  refillCycleIfNeeded();
+  // Protagonista SIEMPRE del ciclo normal: nadie sale de más, patrón invisible.
+  jugador = state.cycle.shift();
+  refillCycleIfNeeded();
+
+  if(cat.interactive){
+    const partners = validPartners(jugador);
+    // Sesgo cupido: si el protagonista tiene compañero y es pareja válida,
+    // 65% de las veces el "otro" es ese compañero; el resto, aleatorio.
+    const partner = cupidPartnerOf(jugador);
+    if(partner && partners.includes(partner) && Math.random()<0.65){
+      otro = partner;
+    } else {
+      otro = partners.length ? pick(partners) : null;
+    }
+  }
+  return { jugador, otro };
+}
+
+/* Categoría por ruleta ponderada. Sin forzados: el cupido ya no toca aquí. */
+function chooseCategory(){
+  return pickWeighted(CATS);
+}
+
+/* ============================================================
+   RENDER SETUP
+   ============================================================ */
+function renderPlayers(){
+  const box = $("#players");
+  box.innerHTML = "";
+  state.players.forEach((name, i)=>{
+    const row = document.createElement("div");
+    row.className = "player-row";
+
+    // Nombre como texto (no input) para no robar el toque al long-press.
+    const nameEl = document.createElement("div");
+    nameEl.className = "name";
+    nameEl.textContent = name;
+
+    // Papelera (oculta hasta seleccionar la fila con un tap).
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "🗑";
+    del.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      if(state.players.length<=2){ showToast("Mínimo 2 jugadores"); return; }
+      const removed = state.players.splice(i,1)[0];
+      delete state.genders[removed];
+      state.pairs = state.pairs.filter(p=>p.a!==removed&&p.b!==removed);
+      save(); renderPlayers();
+    });
+
+    // Pasa el nombre a modo edición (input temporal).
+    function editName(){
+      const input = document.createElement("input");
+      input.type="text"; input.value=state.players[i]; input.maxLength=18;
+      row.replaceChild(input, nameEl);
+      input.focus(); input.select();
+      const commit = ()=>{
+        const old = state.players[i];
+        const val = input.value.trim() || old;
+        state.players[i]=val;
+        // mantener género y parejas coherentes al renombrar
+        if(old!==val){
+          state.genders[val]=state.genders[old];
+          delete state.genders[old];
+          state.pairs.forEach(p=>{ if(p.a===old)p.a=val; if(p.b===old)p.b=val; });
+        }
+        save(); renderPlayers();
+      };
+      input.addEventListener("blur", commit);
+      input.addEventListener("keydown", e=>{ if(e.key==="Enter") input.blur(); });
+    }
+
+    // Interacción: tap = seleccionar (o editar si ya estaba seleccionada);
+    // long-press = cupido. attachTap distingue los tres casos.
+    attachRowGestures(row, {
+      onTap: ()=>{
+        if(row.classList.contains("sel")){ editName(); }
+        else { selectRow(row); }
+      },
+      onLong: openCupid,
+    });
+
+    // Botones género H/M
+    const gBox = document.createElement("div");
+    gBox.className="gender";
+    ["H","M"].forEach(g=>{
+      const gb=document.createElement("button");
+      gb.className="gbtn"; gb.textContent=g;
+      const cur=state.genders[name];
+      if(cur===g) gb.classList.add(g==="H"?"sel-h":"sel-m");
+      gb.addEventListener("click",e=>{
+        e.stopPropagation();
+        const cur=state.genders[state.players[i]];
+        state.genders[state.players[i]] = (cur===g) ? null : g;
+        save(); renderPlayers();
+      });
+      gBox.appendChild(gb);
+    });
+
+    row.appendChild(nameEl);
+    row.appendChild(gBox);
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+function selectRow(row){
+  document.querySelectorAll(".player-row.sel").forEach(r=>{ if(r!==row) r.classList.remove("sel"); });
+  row.classList.add("sel");
+}
+
+/* Gestos por fila: distingue tap corto de long-press (700ms),
+   cancela si el dedo se mueve. El long-press NO dispara tap. */
+function attachRowGestures(el, {onTap, onLong}){
+  let timer=null, longFired=false, startX=0, startY=0, moved=false;
+  const LONG_MS = 2000;
+
+  const start=(x,y)=>{
+    startX=x; startY=y; moved=false; longFired=false;
+    timer=setTimeout(()=>{ longFired=true; timer=null; onLong&&onLong(); }, LONG_MS);
+  };
+  const move=(x,y)=>{
+    if(Math.abs(x-startX)>12||Math.abs(y-startY)>12){
+      moved=true;
+      if(timer){ clearTimeout(timer); timer=null; }
+    }
+  };
+  const end=()=>{
+    if(timer){ clearTimeout(timer); timer=null; }
+    if(!longFired && !moved){ onTap&&onTap(); }
+  };
+
+  el.addEventListener("touchstart",e=>{ const t=e.touches[0]; start(t.clientX,t.clientY); },{passive:true});
+  el.addEventListener("touchmove", e=>{ const t=e.touches[0]; move(t.clientX,t.clientY); },{passive:true});
+  el.addEventListener("touchend", e=>{ end(); });
+  el.addEventListener("touchcancel", ()=>{ if(timer){clearTimeout(timer);timer=null;} });
+  // fallback ratón para pruebas en desktop
+  let mdown=false;
+  el.addEventListener("mousedown",e=>{ mdown=true; start(e.clientX,e.clientY); });
+  el.addEventListener("mousemove",e=>{ if(mdown) move(e.clientX,e.clientY); });
+  el.addEventListener("mouseup",  ()=>{ if(mdown){ mdown=false; end(); } });
+  el.addEventListener("mouseleave",()=>{ if(mdown){ mdown=false; if(timer){clearTimeout(timer);timer=null;} } });
+}
+
+function renderLevels(){
+  document.querySelectorAll(".level").forEach(el=>{
+    el.classList.toggle("sel", el.dataset.lvl===state.level);
+  });
+}
+
+/* ============================================================
+   CUPIDO SHEET
+   ============================================================ */
+function openCupid(){
+  fillSelectors();
+  renderPairs();
+  $("#cupidOverlay").classList.add("active");
+}
+function closeCupid(){ $("#cupidOverlay").classList.remove("active"); }
+
+function fillSelectors(){
+  const a=$("#selA"), b=$("#selB");
+  const opts = state.players.map(p=>`<option value="${escAttr(p)}">${escHtml(p)}</option>`).join("");
+  a.innerHTML=opts; b.innerHTML=opts;
+  if(state.players.length>1) b.selectedIndex=1;
+}
+function renderPairs(){
+  const grid=$("#pairGrid");
+  if(!state.pairs.length){
+    grid.innerHTML=`<div class="empty">Sin parejas todavía.</div>`;
+    return;
+  }
+  grid.innerHTML="";
+  state.pairs.forEach((p,i)=>{
+    const row=document.createElement("div");
+    row.className="pair";
+    row.innerHTML=`<span class="names">${escHtml(p.a)} <small>+</small> ${escHtml(p.b)}</span>`;
+    const rm=document.createElement("button");
+    rm.className="rm"; rm.textContent="Quitar";
+    rm.addEventListener("click",()=>{ state.pairs.splice(i,1); save(); renderPairs(); });
+    row.appendChild(rm);
+    grid.appendChild(row);
+  });
+}
+function addPair(){
+  const a=$("#selA").value, b=$("#selB").value;
+  if(a===b){ showToast("Elige dos personas distintas"); return; }
+  if(state.pairs.some(p=>(p.a===a&&p.b===b)||(p.a===b&&p.b===a))){
+    showToast("Ya están juntados"); return;
+  }
+  state.pairs.push({a,b}); save(); renderPairs();
+  showToast("Hecho 💘");
+}
+function escHtml(s){ return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function escAttr(s){ return String(s).replace(/"/g,"&quot;"); }
+
+/* ============================================================
+   RULETA (canvas)
+   ============================================================ */
+const canvas=$("#wheel"), ctx=canvas.getContext("2d");
+const SIZE=canvas.width, CX=SIZE/2, CY=SIZE/2, R=SIZE/2-6;
+let currentRotation=0, spinning=false;
+
+// Sectores iguales en la rueda (visual). El resultado real es ponderado:
+// giramos hasta el sector de la categoría elegida por chooseCategory().
+function drawWheel(){
+  const n=CATS.length, seg=(Math.PI*2)/n;
+  ctx.clearRect(0,0,SIZE,SIZE);
+  for(let i=0;i<n;i++){
+    const a0=i*seg - Math.PI/2, a1=a0+seg;
+    ctx.beginPath();
+    ctx.moveTo(CX,CY);
+    ctx.arc(CX,CY,R,a0,a1);
+    ctx.closePath();
+    ctx.fillStyle=CATS[i].color;
+    ctx.fill();
+    // texto
+    ctx.save();
+    ctx.translate(CX,CY);
+    ctx.rotate(a0+seg/2);
+    ctx.textAlign="right";
+    ctx.fillStyle="rgba(0,0,0,.82)";
+    ctx.font="700 30px -apple-system,system-ui,sans-serif";
+    wrapLabel(CATS[i].label, R-24);
+    ctx.restore();
+  }
+}
+function wrapLabel(text,x){
+  const words=text.split(" ");
+  if(words.length<=1){ ctx.fillText(text,x,10); return; }
+  const mid=Math.ceil(words.length/2);
+  ctx.fillText(words.slice(0,mid).join(" "),x,-6);
+  ctx.fillText(words.slice(mid).join(" "),x,26);
+}
+
+function categoryAngle(index){
+  const n=CATS.length, seg=360/n;
+  // centro del sector, corregido para que quede bajo el puntero (arriba)
+  return -(index*seg + seg/2);
+}
+
+function spin(){
+  if(spinning) return;
+  spinning=true;
+  $("#turnBtn").disabled=true;
+  $("#skipBtn").style.display="none";
+  $("#card").classList.remove("show");
+  initAudio();
+  sonidoRuleta();
+
+  const cat = chooseCategory();
+  const catIndex = CATS.findIndex(c=>c.key===cat.key);
+
+  const extraTurns = 5 + rand(3);            // 5-7 vueltas
+  const target = categoryAngle(catIndex);
+  const base = currentRotation - (currentRotation % 360);
+  currentRotation = base + extraTurns*360 + target;
+  canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+  setTimeout(()=>{ revealCard(cat); }, 4700);
+}
+
+/* Muestra/oculta el banner de regla activa y descuenta una tirada.
+   Se llama una vez por tirada. Cuando quedan llega a 0, la regla expira. */
+function actualizarBannerRegla(){
+  const bar=$("#ruleBar");
+  const r=state.reglaActiva;
+  if(!r){ bar.style.display="none"; return; }
+  bar.style.display="flex";
+  const t = r.quedan===1 ? "1 tirada" : r.quedan+" tiradas";
+  bar.innerHTML = `<span>📜 ${escHtml(r.texto)}</span><span class="rounds">${t}</span>`;
+  r.quedan--;
+  if(r.quedan<=0){ state.reglaActiva=null; }
+}
+
+function revealCard(cat){
+  // Feedback al parar la ruleta
+  vibrar(60);
+  sonidoParada();
+
+  const idx = nextCardIndex(state.level, cat.key);
+  const list = BANCO[state.level][cat.key];
+  let phrase = (idx>=0 && list[idx]) ? list[idx] : "(sin frases en esta categoría — añade en el BANCO)";
+
+  const { jugador, otro } = assignPlayers(cat);
+  phrase = phrase.replaceAll("{jugador}", jugador).replaceAll("{otro}", otro||jugador);
+
+  const whoEl=$("#cardWho");
+  whoEl.style.display="inline-block";
+  if(cat.interactive && otro && otro!==jugador){
+    whoEl.textContent = `${jugador} + ${otro}`;
+  } else {
+    whoEl.textContent = jugador;
+  }
+  $("#cardCat").textContent = cat.label;
+  $("#cardPhrase").textContent = phrase;
+
+  // Penalización: si la categoría es bebible, muestra los tragos del nivel.
+  const penEl=$("#cardPenalty");
+  if(cat.bebible){
+    const n = TRAGOS[state.level] || 1;
+    penEl.style.display="block";
+    penEl.innerHTML = `¿No te atreves? Bebe <b>${n} trago${n>1?"s":""}</b>.`;
+  } else {
+    penEl.style.display="none";
+  }
+
+  // --- Regla persistente activa: mostrar banner y descontar ---
+  actualizarBannerRegla();
+
+  // --- Lotería de evento: 20% independiente cada tirada ---
+  const evEl=$("#cardEvento");
+  evEl.style.display="none";  // ya no se muestra dentro de la carta
+  if(Math.random() < PROB_EVENTO){
+    const ev = pick(EVENTOS);
+    if(ev.tipo==="regla"){
+      // Activa la regla durante una ronda = nº de jugadores.
+      // Empieza a contar desde la SIGUIENTE tirada.
+      state.reglaActiva = { texto: ev.texto, quedan: state.players.length };
+      const bar=$("#ruleBar");
+      bar.style.display="flex";
+      const q=state.reglaActiva.quedan;
+      bar.innerHTML = `<span>📜 ${escHtml(ev.texto)}</span><span class="rounds">${q} tiradas</span>`;
+    }
+    // Muestra el evento a pantalla completa con confeti (tras un pelín de margen)
+    setTimeout(()=>mostrarEvento(ev.texto), 400);
+  }
+
+  $("#card").classList.add("show");
+
+  state.cupidTurn++;
+  save();
+
+  spinning=false;
+  $("#turnBtn").disabled=false;
+  $("#turnBtn").textContent="Siguiente turno";
+  $("#skipBtn").style.display="block";
+}
+
+/* Muestra el evento a pantalla completa con confeti, vibración y sonido. */
+function mostrarEvento(texto){
+  $("#evBigTxt").textContent = texto;
+  $("#evOverlay").classList.add("active");
+  vibrar([0,90,60,90]);   // patrón distinto para que se note que es evento
+  sonidoEvento();
+  lanzarConfeti();
+}
+function cerrarEvento(){ $("#evOverlay").classList.remove("active"); }
+
+/* ============================================================
+   NAVEGACIÓN
+   ============================================================ */
+function goGame(){
+  if(state.players.length<2){ showToast("Mínimo 2 jugadores"); return; }
+  $("#setup").classList.remove("active");
+  $("#game").classList.add("active");
+  const c=CATS.find(x=>x.key);
+  const emoji={suave:"😇",picante:"🌶️",bestia:"🔥"}[state.level];
+  const name={suave:"Suave",picante:"Picante",bestia:"Bestia"}[state.level];
+  $("#lvlPill").textContent=`${emoji} ${name}`;
+  $("#turnBtn").textContent="Girar";
+  // Sincroniza banner de regla (por si venía de una sesión guardada).
+  const bar=$("#ruleBar");
+  if(state.reglaActiva){
+    bar.style.display="flex";
+    bar.innerHTML = `<span>📜 ${escHtml(state.reglaActiva.texto)}</span><span class="rounds">${state.reglaActiva.quedan} tiradas</span>`;
+  } else {
+    bar.style.display="none";
+  }
+  drawWheel();
+}
+function goSetup(){
+  $("#game").classList.remove("active");
+  $("#setup").classList.add("active");
+  renderPlayers(); renderLevels();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init(){
+  load();
+  renderPlayers();
+  renderLevels();
+  drawWheel();
+
+  // Género seleccionado en el addrow (variable local compartida)
+  let newGender = null;
+  function updateGenderBtns(){
+    ["H","M"].forEach(g=>{
+      const btn=$("#g"+g);
+      btn.classList.remove("sel-h","sel-m");
+      if(newGender===g) btn.classList.add(g==="H"?"sel-h":"sel-m");
+    });
+  }
+  $("#gH").addEventListener("click",()=>{ newGender=(newGender==="H")?null:"H"; updateGenderBtns(); });
+  $("#gM").addEventListener("click",()=>{ newGender=(newGender==="M")?null:"M"; updateGenderBtns(); });
+
+  $("#addBtn").addEventListener("click",()=>{
+    const inp=$("#newName"); const v=inp.value.trim();
+    if(!v) return;
+    state.players.push(v);
+    state.genders[v] = newGender;
+    inp.value=""; newGender=null; updateGenderBtns();
+    state.cycle=[]; save(); renderPlayers();
+  });
+  $("#newName").addEventListener("keydown",e=>{ if(e.key==="Enter") $("#addBtn").click(); });
+
+  document.querySelectorAll(".level").forEach(el=>{
+    el.addEventListener("click",()=>{ state.level=el.dataset.lvl; save(); renderLevels(); });
+  });
+
+  $("#startBtn").addEventListener("click",goGame);
+  $("#backBtn").addEventListener("click",goSetup);
+  $("#turnBtn").addEventListener("click",spin);
+  $("#hub").addEventListener("click",spin);
+  $("#skipBtn").addEventListener("click",()=>{
+    // Saltar: descarta la carta actual sin hacerla. La regla/evento ya
+    // se aplicaron en esta tirada, así que solo ocultamos y dejamos girar.
+    $("#card").classList.remove("show");
+    $("#skipBtn").style.display="none";
+    $("#turnBtn").textContent="Girar";
+  });
+
+  $("#cupidClose").addEventListener("click",closeCupid);
+  $("#pairAdd").addEventListener("click",addPair);
+  $("#cupidOverlay").addEventListener("click",e=>{ if(e.target.id==="cupidOverlay") closeCupid(); });
+
+  // --- Ajustes ---
+  function syncToggles(){
+    $("#tglVibra").classList.toggle("on", state.vibra);
+    $("#tglSonido").classList.toggle("on", state.sonido);
+  }
+  syncToggles();
+  $("#gearBtn").addEventListener("click",e=>{
+    e.stopPropagation();
+    $("#settingsOverlay").classList.add("active");
+  });
+  $("#settingsClose").addEventListener("click",()=>$("#settingsOverlay").classList.remove("active"));
+  $("#settingsOverlay").addEventListener("click",e=>{ if(e.target.id==="settingsOverlay") $("#settingsOverlay").classList.remove("active"); });
+  $("#tglVibra").addEventListener("click",()=>{ state.vibra=!state.vibra; save(); syncToggles(); if(state.vibra) vibrar(60); });
+  $("#tglSonido").addEventListener("click",()=>{ state.sonido=!state.sonido; save(); syncToggles(); if(state.sonido){ initAudio(); beep(660,0.12,"triangle",0.08); } });
+
+  // --- Cerrar evento ---
+  $("#evClose").addEventListener("click",cerrarEvento);
+
+  // Tocar fuera de una fila la deselecciona (oculta la papelera).
+  $("#setup").addEventListener("click",e=>{
+    if(e.target.closest(".gear")) return;
+    if(!e.target.closest(".player-row")){
+      document.querySelectorAll(".player-row.sel").forEach(r=>r.classList.remove("sel"));
+    }
+  });
+}
+document.addEventListener("DOMContentLoaded",init);
+</script>
+</body>
+</html>
